@@ -492,24 +492,59 @@ document.addEventListener('DOMContentLoaded', function(){
 
 const SENHA = 'trizu3d2026';
 const WPP = '5512991619875';
-const STORAGE_KEY = 'trizu3d_produtos';
+const GITHUB_TOKEN = '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';
+const GITHUB_USER = 'trizu3d';
+const GITHUB_REPO = 'trizu3dcombr';
+const GITHUB_BRANCH = 'principal';
+const GITHUB_FILE = 'produtos.json';
+const GITHUB_API = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${GITHUB_FILE}`;
+const GITHUB_RAW = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/${GITHUB_FILE}`;
 
-// ══ STORAGE NA NUVEM ══
+// ══ STORAGE GITHUB ══
 async function load(){
   try{
-    const result = await window.storage.get(STORAGE_KEY, true);
-    return result ? JSON.parse(result.value) : [];
+    // Lê direto do raw — mais rápido e sem CORS
+    const r = await fetch(GITHUB_RAW + '?t=' + Date.now());
+    if(r.ok) return await r.json();
+    return JSON.parse(localStorage.getItem('trizu3d_catalog')||'[]');
   } catch(e){
-    // fallback localStorage
-    try{ return JSON.parse(localStorage.getItem('trizu3d_catalog'))||[]; }catch{ return []; }
+    return JSON.parse(localStorage.getItem('trizu3d_catalog')||'[]');
   }
 }
+
 async function save(d){
   try{
-    await window.storage.set(STORAGE_KEY, JSON.stringify(d), true);
+    // Pega SHA atual do arquivo
+    let sha = null;
+    const check = await fetch(GITHUB_API, {
+      headers:{
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+    if(check.ok){ const ex = await check.json(); sha = ex.sha; }
+
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(d, null, 2))));
+    const body = {
+      message: `Catálogo atualizado — ${new Date().toLocaleString('pt-BR')}`,
+      content, branch: GITHUB_BRANCH
+    };
+    if(sha) body.sha = sha;
+
+    const res = await fetch(GITHUB_API, {
+      method: 'PUT',
+      headers:{
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
     localStorage.setItem('trizu3d_catalog', JSON.stringify(d));
+    return res.ok;
   } catch(e){
     localStorage.setItem('trizu3d_catalog', JSON.stringify(d));
+    return false;
   }
 }
 
@@ -637,12 +672,14 @@ async function salvar(){
     resetForm();
   }
   const btn = document.getElementById('btnAdicionar');
-  btn.textContent = '⏳ Salvando...';
+  btn.textContent = '⏳ Salvando na nuvem...';
   btn.disabled = true;
-  await save(produtos);
+  const ok = await save(produtos);
   btn.disabled = false;
   btn.textContent = editId ? '💾 Salvar alterações' : '+ Adicionar produto';
   renderAdmin(); renderLoja();
+  if(ok) toast(`✅ Produto salvo! Aparece para todos agora.`);
+  else toast(`⚠️ Salvo localmente. Verifique a conexão.`, true);
 }
 
 function resetForm(){
