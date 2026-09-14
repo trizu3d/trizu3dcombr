@@ -492,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 const SENHA = 'trizu3d2026';
 const WPP = '5512991619875';
-const GITHUB_TOKEN = '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';
+const GITHUB_TOKEN = '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';
 const GITHUB_USER = 'trizu3d';
 const GITHUB_REPO = 'trizu3dcombr';
 const GITHUB_BRANCH = 'principal';
@@ -503,7 +503,6 @@ const GITHUB_RAW = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_RE
 // ══ STORAGE GITHUB ══
 async function load(){
   try{
-    // Lê direto do raw — mais rápido e sem CORS
     const r = await fetch(GITHUB_RAW + '?t=' + Date.now());
     if(r.ok) return await r.json();
     return JSON.parse(localStorage.getItem('trizu3d_catalog')||'[]');
